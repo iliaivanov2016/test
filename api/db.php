@@ -70,10 +70,10 @@ $GLOBALS["TEST_DB"] = new DB();
 $GLOBALS["TEST_DB"]->connect();
 
 function test_log($msg){
-    $log_file = __DIR__ . "/log.txt";
     if (!defined("TEST_DEBUG")) {
         return;
     }
+    $log_file = __DIR__ . "/log.txt";
     $cur_retry = 1;
     $dt_now = @date("Ymd_His");
     while ($cur_retry <= 100) {

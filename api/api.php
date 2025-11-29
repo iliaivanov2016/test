@@ -53,17 +53,19 @@ class TestAPI extends stdClass{
                     $memcache->set($term_key, $term_id);
                 }
                 // parse date
-                $s = trim(str_replace('+0300', '', $item->pubDate));
+                $s = trim( str_replace('+0300', '', $item->pubDate) );
                 $t = strtotime($s);
                 // extract slug from url
                 $ar = explode("/", $item->link);
-                $slug = trim(end($ar));
+                $slug = trim( end($ar) );
                 unset($ar);
                 // get image url
                 $image_url = null;
+                // find end of link
                 $p = stripos($content, $slug);
                 if ($p !== false){
                     $p += strlen($item->link);
+                    // find closing item tag after link
                     $pe = stripos($content, $tag_end, $p);
                     if ($pe !== false) {
                         // extract xml from link to closing item tag
