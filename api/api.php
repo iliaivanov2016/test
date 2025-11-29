@@ -25,12 +25,13 @@ class TestAPI extends stdClass{
         $content = curl_exec($ch);
         curl_close($ch);        
         
+        // parse xml
         $xml = simplexml_load_string($content);
-        $tag_end = '</item>';
-        $tag0 = '<enclosure url="';
-        $tag1 = '"';
-        
+        unset($content);
+
+        // iterate through all xml items
         foreach ($xml->channel->item as $item){
+            
             if (defined("TEST_DEBUG_CRON")) test_log("1.news_cron \n".print_r($item, true));
             
             $url = $item->link;
@@ -38,35 +39,49 @@ class TestAPI extends stdClass{
             
             $item_key = "ITEM|" . $crc;
             
+            // try find news item in MemCached
             $news_id = (int)$memcache->get($item_key);
             if (defined("TEST_DEBUG_CRON")) test_log("2.news_cron news_id = $news_id");
             
-            //if (!$news_id){
-            if (1){
-                // new item found
+            if (!$news_id){
+                
+                // new item found - need add it to db and MemCached
                 if (defined("TEST_DEBUG_CRON")) test_log("3.news_cron ADD NEW ITEM...");
+                
+                // find term in MemCached
                 $term_key = "TERM|" . $item->category;
                 $term_id = (int)$memcache->get($term_key);
+                
                 if (!$term_id) {
-                    // add new category
+                    
+                    // add new term to database
                     if (defined("TEST_DEBUG_CRON")) test_log("4.news_cron ADD NEW CATEGORY...");
+                    
                     DB::query("INSERT INTO `terms` VALUES (NULL,?)", [$item->category]);
                     $term_id = DB::get_last_insert_id();
+                    
+                    // add new term to MemCached
                     if (defined("TEST_DEBUG_CRON")) test_log("5.news_cron ADD NEW CATEGORY... term_id = $term_id $term_key");
                     $memcache->set($term_key, $term_id);
+                    
                 }
+                
                 // parse date
                 $s = trim( str_replace('+0300', '', $item->pubDate) );
                 $t = strtotime($s);
+                
                 // extract slug from url
                 $ar = explode("/", $item->link);
                 $slug = trim( end($ar) );
                 unset($ar);
+                
                 // get image url
                 $image_url = null;
                 if (is_object($item->enclosure)){
                     $image_url = $item->enclosure->attributes()->url;
                 }
+                
+                // save news item to database
                 if (defined("TEST_DEBUG_CRON")) test_log("6.news_cron ADD NEW CATEGORY...  term_id = $term_id $term_key\n$slug\n$image_url\n".$item->pubDate. " ".@date("Y-m-d H:i:s", $t));
                 DB::query("INSERT INTO `news` VALUES (NULL,?,?,?,?,?,?,?,?)", [
                     $term_id,
@@ -79,9 +94,12 @@ class TestAPI extends stdClass{
                     $image_url
                 ]);        
                 $news_id = DB::get_last_insert_id();
+                
+                // add news item to MemCached
                 $memcache->set($item_key, $news_id);
                 $news_added++;
                 if (defined("TEST_DEBUG_CRON")) test_log("7.news_cron news_added = $news_added");
+                
             }            
         }
         
@@ -92,6 +110,7 @@ class TestAPI extends stdClass{
     
     public static function get_default_term(){
         
+        // return first term for index page without any selection
         $terms = self::get_terms();
         return $terms["terms"][0]["title"];
         
@@ -100,30 +119,36 @@ class TestAPI extends stdClass{
 
     public static function get_current_date_term(){
         
+        // get date and term from path if possible
+        
         $s = (isset($_REQUEST["path"])) ? $_REQUEST["path"] : "";
         $ar = (!empty($s)) ? explode("/", $s) : [];
         $term = "";
         if ((is_array($ar)) && (count($ar) == 2)){
-            if (defined("TEST_DEBUG")) test_log(">>get_current_date_term\ns=$s\n".print_r($ar, true));
+            
+            // date and term selected
+            
+            if (defined("TEST_DEBUG")) test_log(">get_current_date_term\ns=$s\n".print_r($ar, true));
             $term = array_pop($ar);
+            
             // limit 250 max
             if (strlen($term) > 250){
                 $term = substr($term, 0, 250); 
             }
-            if (defined("TEST_DEBUG")) test_log(">>>get_current_date_term\nterm = $term");
-            $dt = array_pop($ar); // YYYYMMDD
+            
+            // date stored in YYYYMMDD
+            $dt = array_pop($ar); 
             // limit 8
             if (strlen($dt) > 8){
                 $dt = substr($dt, 0, 8); 
             }
-            if (defined("TEST_DEBUG")) test_log(">>>get_current_date_term\ndt = $dt");
+            
             $year = (int)substr($dt,0,4);
             $month = (int)substr($dt,4,2);
             $day = (int)substr($dt,6,2);
             $date = "{$year}-{$month}-{$day}";
+            
         }
-        
-        if (defined("TEST_DEBUG")) test_log("1.get_current_date_term term = $term date = $date");
         
         $res = [
             "date"  => (empty($term)) ? @date("Y-m-d") : $date,
