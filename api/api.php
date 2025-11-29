@@ -39,7 +39,8 @@ class TestAPI extends stdClass{
             $news_id = (int)$memcache->get($item_key);
             if (defined("TEST_DEBUG")) test_log("2.get_news news_id = $news_id");
             
-            if (!$news_id){
+            //if (!$news_id){
+            if (1){
                 // new item found
                 if (defined("TEST_DEBUG")) test_log("3.get_news ADD NEW ITEM...");
                 $term_key = "TERM|" . $item->category;
@@ -61,32 +62,10 @@ class TestAPI extends stdClass{
                 unset($ar);
                 // get image url
                 $image_url = null;
-                // find end of link
-                $p = stripos($content, $slug);
-                if ($p !== false){
-                    $p += strlen($item->link);
-                    // find closing item tag after link
-                    $pe = stripos($content, $tag_end, $p);
-                    if ($pe !== false) {
-                        // extract xml from link to closing item tag
-                        $s = substr($content, $p, $pe - $p);
-                        $p = stripos($s, $tag0);
-                        if ($p !== false){
-                            // extract image url from enclosure tag
-                            $p += strlen($tag0);
-                            $p1 = stripos($s, $tag1, $p);
-                            if ($p1 !== false){
-                                $image_url = trim(substr($s, $p, $p1-$p));
-                            }
-                        }                   
-                        unset($s);
-                        unset($p1);
-                    }
-                    unset($p);
-                    unset($pe);
+                if (is_object($item->enclosure)){
+                    $image_url = $item->enclosure->attributes()->url;
                 }
                 if (defined("TEST_DEBUG")) test_log("6.get_news ADD NEW CATEGORY...  term_id = $term_id $term_key\n$slug\n$image_url\n".$item->pubDate. " ".@date("Y-m-d H:i:s", $t));
-                
                 DB::query("INSERT INTO `news` VALUES (NULL,?,?,?,?,?,?,?,?)", [
                     $term_id,
                     $crc,
