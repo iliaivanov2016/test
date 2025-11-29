@@ -8,3 +8,11 @@ after that update .env file with config setting for mysql (TEST_DB_...) and memc
 setup cron job for getting news from RSS this way (replace /var/www/ttbgrossist.com/test with your install path):
 
 */5 * * * * cd /var/www/ttbgrossist.com/test && php -f cron_get_news.php
+
+Requirements:
+PHP7+, MySQL
+
+PHP Extensions:
+PDO
+memcache
+SimpleXML
