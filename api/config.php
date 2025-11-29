@@ -2,8 +2,8 @@
 // load .env file to array
 $env = parse_ini_file(__DIR__.'/.env');
 
-define ("TEST_DEBUG", 1);
-define ("TEST_DEBUG_DB", 1);
+//define ("TEST_DEBUG", 1);
+//define ("TEST_DEBUG_DB", 1);
 
 // mysql settings
 define ("TEST_DB_HOST", $env["TEST_DB_HOST"]);

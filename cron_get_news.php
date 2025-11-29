@@ -1,5 +1,6 @@
 <?php
 
+// */5 * * * * cd /var/www/ttbgrossist.com/test && php -f cron_get_news.php
 /*
 cd /var/www/ttbgrossist.com/test
 php -f cron_get_news.php
