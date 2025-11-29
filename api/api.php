@@ -24,8 +24,9 @@ class TestAPI extends stdClass{
         curl_close($ch);        
         
         $xml = simplexml_load_string($content);
-        
-        if (defined("TEST_DEBUG")) file_put_contents(__DIR__."/news.htm", $content);
+        $tag_end = '</item>';
+        $tag0 = '<enclosure url="';
+        $tag1 = '"';
         
         foreach ($xml->channel->item as $item){
             if (defined("TEST_DEBUG")) test_log("1.get_news \n".print_r($item, true));
@@ -59,34 +60,36 @@ class TestAPI extends stdClass{
                 $slug = trim(end($ar));
                 unset($ar);
                 // get image url
-                $image_url = PDO::NULL_EMPTY_STRING;
-                $p = stripos($content, $item->link);
-if (defined("TEST_DEBUG")) test_log("1.p = $p");
+                $image_url = null;
+                $p = stripos($content, $slug);
                 if ($p !== false){
-                    $tag0 = '<enclosure url="';
-                    $tag1 = '"';
                     $p += strlen($item->link);
-                    $p = stripos($content, $tag0, $p);
-if (defined("TEST_DEBUG")) test_log("2.p = $p");
-                    if ($p !== false){
-                        $p += strlen($tag0);
-if (defined("TEST_DEBUG")) test_log("3.p = $p");
-                        $p1 = stripos($content, $tag1, $p);
-if (defined("TEST_DEBUG")) test_log("4.p1 = $p1");
-                        if ($p1 !== false){
-                            $image_url = trim(substr($content, $p, $p1-$p));
-if (defined("TEST_DEBUG")) test_log("img=$image_url");
-                        }
-                    }                    
+                    $pe = stripos($content, $tag_end, $p);
+                    if ($pe !== false) {
+                        // extract xml from link to closing item tag
+                        $s = substr($content, $p, $pe - $p);
+                        $p = stripos($s, $tag0);
+                        if ($p !== false){
+                            // extract image url from enclosure tag
+                            $p += strlen($tag0);
+                            $p1 = stripos($s, $tag1, $p);
+                            if ($p1 !== false){
+                                $image_url = trim(substr($s, $p, $p1-$p));
+                            }
+                        }                   
+                        unset($s);
+                        unset($p1);
+                    }
+                    unset($p);
+                    unset($pe);
                 }
                 if (defined("TEST_DEBUG")) test_log("6.get_news ADD NEW CATEGORY...  term_id = $term_id $term_key\n$slug\n$image_url\n".$item->pubDate. " ".@date("Y-m-d H:i:s", $t));
-                die ("2");
                 
-                DB::query("INSERT INTO `terms` VALUES (NULL,?,?,?,?,?,?,?,?)", [
+                DB::query("INSERT INTO `news` VALUES (NULL,?,?,?,?,?,?,?,?)", [
                     $term_id,
                     $crc,
-                    @date("Y-m-d", @date("Y-m-d", $t)),
-                    @date("Y-m-d", @date("H:i:s", $t)),
+                    @date("Y-m-d", $t),
+                    @date("H:i:s", $t),
                     $item->title,
                     $slug,
                     $item->link,  
@@ -95,10 +98,9 @@ if (defined("TEST_DEBUG")) test_log("img=$image_url");
                 $news_id = DB::get_last_insert_id();
                 $memcache->set($item_key, $news_id);
                 $news_added++;
+                if (defined("TEST_DEBUG")) test_log("7.get_news news_added = $news_added");
             }            
         }
         if (defined("TEST_DEBUG")) test_log("<get_news news_added = $news_added");
-        die ("get_news! $news_added");
-    }
-    
+    }    
 }

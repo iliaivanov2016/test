@@ -4,6 +4,10 @@
 /*
 cd /var/www/ttbgrossist.com/test
 php -f cron_get_news.php
+  
+telnet localhost 11211
+flush_all
+quit
  */
 
 // block run from browser
